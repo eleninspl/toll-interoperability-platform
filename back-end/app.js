@@ -20,6 +20,9 @@ initializeDatabase()
     const { router: authRoutes } = require("./routes/auth");
     app.use("/api/auth", authRoutes);
 
+      const analyticsRoutes = require("./routes/analytics");
+      app.use("/api/analytics", analyticsRoutes);
+
     const passesRoutes = require("./routes/passes");
     app.use("/api", passesRoutes);
 

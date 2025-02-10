@@ -176,12 +176,17 @@ router.get("/settlements", async (req, res) => {
     const client = await pool.connect();
     try {
       const query = `
-        SELECT 
-          CASE 
-            WHEN payer = $1 THEN payee 
-            ELSE payer 
-          END AS other_operator,
-          SUM(amount) AS total_settlement
+        SELECT
+          CASE
+            WHEN payer = $1 THEN payee
+            ELSE payer
+            END AS other_operator,
+          SUM(
+              CASE
+                WHEN payer = $1 THEN -amount -- Negative when the logged-in operator is the payer
+                ELSE amount -- Positive when the logged-in operator is the payee
+                END
+          ) AS total_settlement
         FROM debt_settlement
         WHERE payer = $1 OR payee = $1
         GROUP BY other_operator;
