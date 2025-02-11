@@ -1,8 +1,17 @@
 // src/pages/OperatorDashboard.js
 import React, { useState } from 'react';
-import { Container, Button, Card, Spinner, Alert, Table, Form } from 'react-bootstrap';
+import {
+    Container,
+    Button,
+    Card,
+    Spinner,
+    Alert,
+    Table,
+    Form,
+    Collapse
+} from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
-import SettlementTable from '../components/SettlementTable'; // Debt Settlements Table
+import SettlementTable from '../components/SettlementTable'; // For the debt settlements table
 
 const OperatorDashboard = ({ user, setIsAuthenticated }) => {
     const navigate = useNavigate();
@@ -13,11 +22,14 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
     const [settlements, setSettlements] = useState([]);
     const [settleLoading, setSettleLoading] = useState(false);
     const [settleError, setSettleError] = useState(null);
+    const [showSettlements, setShowSettlements] = useState(false);
 
     const handleFetchSettlements = async () => {
         setSettlements([]);
         setSettleError(null);
         setSettleLoading(true);
+        setShowSettlements(false); // Hide old data while loading
+
         try {
             const token = localStorage.getItem('authToken');
             const response = await fetch('http://localhost:3000/api/analytics/settlements', {
@@ -27,13 +39,13 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
             if (!response.ok) throw new Error('Failed to fetch settlements.');
             const data = await response.json();
             setSettlements(data);
+            setShowSettlements(true); // Show the new data once fetched
         } catch (err) {
             setSettleError(err.message);
         } finally {
             setSettleLoading(false);
         }
     };
-
 
     // ------------------------------
     // PART 2: Station Popularity
@@ -43,17 +55,17 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
     const [popData, setPopData] = useState([]);
     const [popError, setPopError] = useState(null);
     const [popLoading, setPopLoading] = useState(false);
+    const [showPopularity, setShowPopularity] = useState(false);
 
     const handleFetchStationPopularity = async () => {
         setPopData([]);
         setPopError(null);
         setPopLoading(true);
+        setShowPopularity(false); // Hide old data while loading
+
         try {
             const token = localStorage.getItem('authToken');
-            // Ensure your backend is mounted so that the full path is:
-            // GET http://localhost:3000/api/operator/station-popularity?fromDate=...&toDate=...
             const url = `http://localhost:3000/api/analytics/operator/station-popularity?fromDate=${popFromDate}&toDate=${popToDate}`;
-
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
@@ -62,7 +74,8 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
                 throw new Error(`Error fetching station popularity: ${response.status}`);
             }
             const data = await response.json();
-            setPopData(data); // Array of objects with { station_name, passthrough_count }
+            setPopData(data);
+            setShowPopularity(true); // Show the new data once fetched
         } catch (err) {
             setPopError(err.message);
         } finally {
@@ -70,37 +83,40 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
         }
     };
 
-
     // ------------------------------
-    // PART 3: Vehicle Type Rankings
+    // PART 3: Vehicle Model Rankings
     // ------------------------------
-    const [rankFromDate, setRankFromDate] = useState('');
-    const [rankToDate, setRankToDate] = useState('');
-    const [rankData, setRankData] = useState([]);
-    const [rankError, setRankError] = useState(null);
-    const [rankLoading, setRankLoading] = useState(false);
+    const [vrFromDate, setVrFromDate] = useState('');
+    const [vrToDate, setVrToDate] = useState('');
+    const [vrData, setVrData] = useState([]);
+    const [vrError, setVrError] = useState(null);
+    const [vrLoading, setVrLoading] = useState(false);
+    const [showVR, setShowVR] = useState(false);
 
-    const handleFetchVehicleTypeRankings = async () => {
-        setRankData([]);
-        setRankError(null);
-        setRankLoading(true);
+    const handleFetchVehicleRankings = async () => {
+        setVrData([]);
+        setVrError(null);
+        setVrLoading(true);
+        setShowVR(false); // Hide old data while loading
+
         try {
             const token = localStorage.getItem('authToken');
-            const url = `http://localhost:3000/api/analytics/operator/vehicle-type-rank?fromDate=${
-                rankFromDate || '1970-01-01'
-            }&toDate=${rankToDate || '3000-01-01'}`;
-
+            // Make sure the URL matches your backend mount point
+            const url = `http://localhost:3000/api/analytics/operator/vehicle-type-rank?fromDate=${vrFromDate}&toDate=${vrToDate}`;
             const response = await fetch(url, {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!response.ok) throw new Error(`Error fetching vehicle type rankings: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`Error fetching vehicle rankings: ${response.status}`);
+            }
             const data = await response.json();
-            setRankData(data);
+            setVrData(data);
+            setShowVR(true); // Show the new data once fetched
         } catch (err) {
-            setRankError(err.message);
+            setVrError(err.message);
         } finally {
-            setRankLoading(false);
+            setVrLoading(false);
         }
     };
 
@@ -122,17 +138,36 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
                 <Card.Body>
                     <Card.Title>Debt Settlements</Card.Title>
                     <div className="mb-3">
-                        <Button variant="primary" onClick={handleFetchSettlements} disabled={settleLoading}>
+                        <Button
+                            variant="primary"
+                            onClick={handleFetchSettlements}
+                            disabled={settleLoading}
+                            className="me-2"
+                        >
                             {settleLoading ? 'Loading...' : 'Load Debt Settlements'}
                         </Button>
+                        {showSettlements && !settleLoading && (
+                            <Button
+                                variant="outline-secondary"
+                                onClick={() => {
+                                    setSettlements([]);
+                                    setShowSettlements(false);
+                                }}
+                            >
+                                Hide Results
+                            </Button>
+                        )}
                     </div>
                     {settleError && <Alert variant="danger">{settleError}</Alert>}
-                    {!settleLoading && !settleError && settlements.length > 0 && (
-                        <SettlementTable settlements={settlements} />
-                    )}
-                    {!settleLoading && !settleError && settlements.length === 0 && (
-                        <p>No data loaded yet.</p>
-                    )}
+                    <Collapse in={showSettlements}>
+                        <div>
+                            {settlements.length > 0 ? (
+                                <SettlementTable settlements={settlements} />
+                            ) : (
+                                !settleLoading && <p>No data loaded yet.</p>
+                            )}
+                        </div>
+                    </Collapse>
                 </Card.Body>
             </Card>
 
@@ -160,80 +195,121 @@ const OperatorDashboard = ({ user, setIsAuthenticated }) => {
                             />
                         </Form.Group>
                     </Form>
-                    <Button variant="secondary" onClick={handleFetchStationPopularity} disabled={popLoading}>
+                    <Button
+                        variant="secondary"
+                        onClick={handleFetchStationPopularity}
+                        disabled={popLoading}
+                        className="me-2"
+                    >
                         {popLoading ? 'Loading...' : 'Load Station Popularity'}
                     </Button>
+                    {showPopularity && !popLoading && (
+                        <Button
+                            variant="outline-secondary"
+                            onClick={() => {
+                                setPopData([]);
+                                setShowPopularity(false);
+                            }}
+                        >
+                            Hide Results
+                        </Button>
+                    )}
                     {popError && <Alert variant="danger" className="mt-3">{popError}</Alert>}
-                    {!popLoading && !popError && popData.length > 0 && (
-                        <Table striped bordered hover className="mt-3">
-                            <thead>
-                            <tr>
-                                <th>Station Name</th>
-                                <th>Passthrough Count</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {popData.map((item, idx) => (
-                                <tr key={idx}>
-                                    <td>{item.station_name}</td>
-                                    <td>{item.passthrough_count}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </Table>
-                    )}
-                    {!popLoading && !popError && popData.length === 0 && (
-                        <p className="mt-3">No popularity data loaded yet.</p>
-                    )}
+                    <Collapse in={showPopularity}>
+                        <div>
+                            {popData.length > 0 ? (
+                                <Table striped bordered hover className="mt-3">
+                                    <thead>
+                                    <tr>
+                                        <th>Station Name</th>
+                                        <th>Passthrough Count</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {popData.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td>{item.station_name}</td>
+                                            <td>{item.passthrough_count}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </Table>
+                            ) : (
+                                !popLoading && <p className="mt-3">No popularity data loaded yet.</p>
+                            )}
+                        </div>
+                    </Collapse>
                 </Card.Body>
             </Card>
 
-            {/* =============== VEHICLE TYPE RANKINGS =============== */}
+            {/* =============== VEHICLE MODEL RANKINGS =============== */}
             <Card className="my-4">
                 <Card.Body>
-                    <Card.Title>Vehicle Type Rankings</Card.Title>
+                    <Card.Title>Vehicle Model Rankings</Card.Title>
                     <Form className="mb-3">
-                        <Form.Group className="mb-2">
+                        <Form.Group controlId="vrFromDate" className="mb-2">
                             <Form.Label>From Date (YYYY-MM-DD)</Form.Label>
                             <Form.Control
                                 type="text"
                                 placeholder="e.g., 2022-01-01"
-                                value={rankFromDate}
-                                onChange={(e) => setRankFromDate(e.target.value)}
+                                value={vrFromDate}
+                                onChange={(e) => setVrFromDate(e.target.value)}
                             />
                         </Form.Group>
-                        <Form.Group className="mb-2">
+                        <Form.Group controlId="vrToDate" className="mb-2">
                             <Form.Label>To Date (YYYY-MM-DD)</Form.Label>
                             <Form.Control
                                 type="text"
                                 placeholder="e.g., 2022-01-31"
-                                value={rankToDate}
-                                onChange={(e) => setRankToDate(e.target.value)}
+                                value={vrToDate}
+                                onChange={(e) => setVrToDate(e.target.value)}
                             />
                         </Form.Group>
                     </Form>
-                    <Button variant="info" onClick={handleFetchVehicleTypeRankings} disabled={rankLoading}>
-                        {rankLoading ? 'Loading...' : 'Load Vehicle Rankings'}
+                    <Button
+                        variant="secondary"
+                        onClick={handleFetchVehicleRankings}
+                        disabled={vrLoading}
+                        className="me-2"
+                    >
+                        {vrLoading ? 'Loading...' : 'Load Vehicle Model Rankings'}
                     </Button>
-                    {rankError && <Alert variant="danger" className="mt-3">{rankError}</Alert>}
-                    {!rankLoading && rankData.length > 0 && (
-                        <Table striped bordered hover className="mt-3">
-                            <thead>
-                            <tr>
-                                <th>Vehicle Type</th>
-                                <th>Passthrough Count</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {rankData.map((item, idx) => (
-                                <tr key={idx}>
-                                    <td>{item.vehicle_type}</td>
-                                    <td>{item.passthrough_count}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </Table>
+                    {showVR && !vrLoading && (
+                        <Button
+                            variant="outline-secondary"
+                            onClick={() => {
+                                setVrData([]);
+                                setShowVR(false);
+                            }}
+                        >
+                            Hide Results
+                        </Button>
                     )}
+                    {vrError && <Alert variant="danger" className="mt-3">{vrError}</Alert>}
+                    <Collapse in={showVR}>
+                        <div>
+                            {vrData.length > 0 ? (
+                                <Table striped bordered hover className="mt-3">
+                                    <thead>
+                                    <tr>
+                                        <th>Vehicle Model</th>
+                                        <th>Passthrough Count</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {vrData.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td>{item.vehicle_model}</td>
+                                            <td>{item.passthrough_count}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </Table>
+                            ) : (
+                                !vrLoading && <p className="mt-3">No vehicle ranking data loaded yet.</p>
+                            )}
+                        </div>
+                    </Collapse>
                 </Card.Body>
             </Card>
 
