@@ -1,0 +1,14 @@
+# Dependencies (install with npm install in each folder)
+node_modules/
+
+# OS and editor files
+.DS_Store
+.idea/
+
+# Runtime files
+cli-client/token.json
+back-end/uploads/
+back-end/dump_*.sql
+
+# Front-end production build
+front-end/build/
