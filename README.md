@@ -157,11 +157,8 @@ The front end is a Create React App project with React Router and React Bootstra
 
 ## Known limitations
 
-The code is kept as it was submitted. While writing this README I ran the API against a local PostgreSQL, ran both CLI scripts and built the front end. These are the issues I found:
+The code is kept as it was submitted, apart from three small fixes: the pass queries now report times in the server's local time instead of shifting them to UTC, `tollStationPasses` now includes each pass's `tagProvider`, and the web app no longer logs you out when you reload the page. While writing this README I ran the API against a local PostgreSQL, ran both CLI scripts and built the front end. None of the issues below affect the runs shown above, but they are worth knowing if you build on this code:
 
-- **Timestamps shift by the server's UTC offset.** `tollStationPasses` and `passAnalysis` convert pass times to UTC before printing them. On a machine set to Greek time, a pass recorded at 06:33 is reported as 04:33, and its `passID` changes with it. The results are correct only when the server runs in UTC.
-- **`tollStationPasses` never returns `tagProvider`.** The query names the column `tagoperator` but the code reads `tagprovider`, so the field is missing from every pass.
-- **The web app logs you out when you reload the page.** On start-up it checks the saved token at `/api/auth/verify-token`, but the route is `/api/verify-token`. The check fails and the token is deleted.
 - **The four pass queries need no login**, although the CLI asks for one first.
 - **Uploading the same passes file twice doubles the debts.** Duplicate passes are skipped, but the debt settlements are computed from every row in the file. `resetpasses` does not clear the settlements either.
 - **Uploaded passes must use known tags.** Tags are loaded from the fixed file `back-end/dummy_data/transceiver.csv`. A pass with any other tag breaks a foreign-key constraint, and the whole upload is rejected.

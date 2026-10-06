@@ -21,6 +21,11 @@ async function runTransaction(callback) {
 }
 
 
+// TIMESTAMP columns are parsed as local time; format them back without a UTC shift
+function localISO(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+}
+
 // 20240101 ===> 2024-01-01
 function formatDate(dateString) {
   return `${dateString.slice(0, 4)}-${dateString.slice(4, 6)}-${dateString.slice(6, 8)}`;
@@ -88,7 +93,7 @@ router.get("/tollStationPasses/:tollStationID/:date_from/:date_to", async (req, 
 
       const passes = await client.query(
         `SELECT
-          p.timestamp, t.id as tagid, t.operatorid as tagoperator, p.charge,
+          p.timestamp, t.id as tagid, t.operatorid as tagprovider, p.charge,
           CASE
             WHEN t.operatorid = ts.operatorid THEN 'home'
             ELSE 'visitor'
@@ -110,8 +115,8 @@ router.get("/tollStationPasses/:tollStationID/:date_from/:date_to", async (req, 
         nPasses: passes.rows.length,
         passList: passes.rows.map((pass, index) => ({
           passIndex: index + 1,
-          passID: `${tollStationID}${pass.timestamp.toISOString().replace(/[-:T.Z]/g, "")}`,
-          timestamp: pass.timestamp.toISOString().slice(0, 16).replace("T", " "),
+          passID: `${tollStationID}${localISO(pass.timestamp).replace(/[-:T.Z]/g, "")}`,
+          timestamp: localISO(pass.timestamp).slice(0, 16).replace("T", " "),
           tagID: pass.tagid,
           tagProvider: pass.tagprovider,
           passType: pass.passtype,
@@ -150,9 +155,9 @@ router.get("/passAnalysis/:stationOpID/:tagOpID/:date_from/:date_to", async (req
         nPasses: passes.rows.length,
         passList: passes.rows.map((pass, index) => ({
           passIndex: index + 1,
-          passID: `${pass.stationid}${pass.timestamp.toISOString().replace(/[-:T.Z]/g, "")}`,
+          passID: `${pass.stationid}${localISO(pass.timestamp).replace(/[-:T.Z]/g, "")}`,
           stationID: pass.stationid,
-          timestamp: pass.timestamp.toISOString().slice(0, 16).replace("T", " "),
+          timestamp: localISO(pass.timestamp).slice(0, 16).replace("T", " "),
           tagID: pass.tagid,
           passCharge: Number(pass.charge)
         }))
